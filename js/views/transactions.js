@@ -9,6 +9,7 @@ import { normaliser } from '../model/rules.js';
 import { vedlegg } from './documents.js';
 import { mndFor, aarMedData, MND_NAVN } from '../model/calc.js';
 import { csv, transaksjonsRader, TRANSAKSJON_KOLONNER } from '../model/export.js';
+import { erLastTransaksjon, erLastDato, lastMelding, aarFor } from '../model/years.js';
 
 const SIDE = 250;
 
@@ -116,7 +117,7 @@ export function render(el, params) {
     const kontoNavn = new Map(db.kontoer.map((k) => [k.id, k.navn]));
     const tbody = h('tbody');
     for (const tr of liste.slice(0, vis)) {
-      const ukat = !tr.kategori;
+      const ukat = !tr.kategori && !erLastTransaksjon(db, tr);
       const katCelle = ukat
         ? kategoriValg(db.kategorier, '', {
           class: 'kat-valg',
@@ -158,10 +159,14 @@ export function render(el, params) {
       husOppgjor: h('input', { type: 'checkbox', checked: !!d.husOppgjor }),
       motpart: h('input', { list: 'motpart-liste', value: (db.motparter || []).find((m) => m.id === d.motpart)?.navn || '', placeholder: 'Kun for utlegg og refusjoner' }),
     };
-    const like = ny ? [] : db.transaksjoner.filter((x) => x !== tr && x.tekst && x.tekst === tr.tekst);
+    const last = !ny && erLastTransaksjon(db, d);
+    // I et låst år kan bare notat, etiketter, detaljer og motpart endres
+    if (last) for (const k of ['dato', 'betalt', 'konto', 'tekst', 'belop', 'kategori']) inp[k].disabled = true;
+    const like = ny || last ? [] : db.transaksjoner.filter((x) => x !== tr && x.tekst && x.tekst === tr.tekst && !erLastTransaksjon(db, x));
     const alleLike = h('input', { type: 'checkbox' });
     const feil = h('p.feil', { hidden: true });
     const innhold = h('form.skjema.to-kol', { onsubmit: (e) => e.preventDefault() },
+      last ? h('p.advarsel.hel', `🔒 ${lastMelding(aarFor(d))} Notat, etiketter og motpart kan fortsatt endres.`) : null,
       felt('Kjøpsdato', inp.dato),
       felt('Betalingsdato', inp.betalt, 'For kortkjøp: datoen kortfakturaen ble betalt'),
       felt('Konto', inp.konto),
@@ -180,7 +185,7 @@ export function render(el, params) {
       feil
     );
     const knapper = [];
-    if (!ny) knapper.push({ tekst: 'Slett', type: 'fare venstre', onclick: async () => {
+    if (!ny && !last) knapper.push({ tekst: 'Slett', type: 'fare venstre', onclick: async () => {
       if (!(await bekreft('Slette transaksjonen?', `«${d.tekst}» ${kr(d.belop, true)} kr slettes.`, 'Slett'))) return false;
       db.transaksjoner.splice(db.transaksjoner.indexOf(tr), 1);
       store.changed();
@@ -196,6 +201,8 @@ export function render(el, params) {
       if (belop == null) { feil.textContent = 'Ugyldig beløp.'; feil.hidden = false; return false; }
       if (!inp.tekst.value.trim()) { feil.textContent = 'Tekst mangler.'; feil.hidden = false; return false; }
       if (!inp.dato.value) { feil.textContent = 'Kjøpsdato mangler.'; feil.hidden = false; return false; }
+      const nyBetalt = inp.betalt.value || inp.dato.value;
+      if (!last && erLastDato(db, nyBetalt)) { feil.textContent = lastMelding(nyBetalt.slice(0, 4)); feil.hidden = false; return false; }
       Object.assign(d, {
         dato: inp.dato.value,
         betalt: inp.betalt.value || inp.dato.value,

@@ -29,6 +29,7 @@ import * as husholdning from './views/household.js';
 import * as utlegg from './views/outlays.js';
 import * as innsikt from './views/insight.js';
 import { erUtlegg } from './model/outlays.js';
+import { oppgraderBudsjett, aarFor } from './model/years.js';
 
 const TILKOBLING = 'finsys.tilkobling';
 export const AUTOLAS_MIN = 15;
@@ -368,6 +369,8 @@ function oppgrader(db) {
   db.innstillinger.skatt ||= { rentefradrag: 0.22, bunnfradrag: 1900000, formuesskattSats: 0.01, rabattAksjer: 0.2 };
   db.budsjett ||= {};
   db.budsjett.poster ||= {};
+  oppgraderBudsjett(db, db.transaksjoner?.reduce((m, t) => (aarFor(t) > m ? aarFor(t) : m), '') || String(new Date().getFullYear()));
+  db.aarsavslutning ||= {};
   db.regler ||= [];
   db.formue ||= { poster: [], historikk: [], utbytte: [] };
   db.formue.utbytte ||= [];

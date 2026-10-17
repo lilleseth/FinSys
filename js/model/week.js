@@ -4,6 +4,7 @@ import { kategoriIndeks } from './categories.js';
 import { sum } from './calc.js';
 import { fastePoster } from './recurring.js';
 import { normaliser } from './rules.js';
+import { budsjettFor } from './years.js';
 
 const DAG = 86400000;
 const iso = (ms) => new Date(ms).toISOString().slice(0, 10);
@@ -79,7 +80,7 @@ export function ukeSammendrag(db, start = sisteUke(db)) {
   const mnd = slutt.slice(0, 7);
   const dagNr = Number(slutt.slice(8, 10));
   const dagerIMnd = new Date(Date.UTC(Number(mnd.slice(0, 4)), Number(mnd.slice(5, 7)), 0)).getUTCDate();
-  const budsjett = sum(Object.entries(db.budsjett?.poster || {}).filter(([id]) => idx.hoved.get(id)?.type === 'utgift' || idx.type(id) === 'utgift').map(([, b]) => b));
+  const budsjett = sum(Object.entries(budsjettFor(db, mnd.slice(0, 4))).filter(([id]) => idx.hoved.get(id)?.type === 'utgift' || idx.type(id) === 'utgift').map(([, b]) => b));
   const brukt = forbruk(db.transaksjoner.filter((t) => t.dato >= `${mnd}-01` && t.dato <= slutt && type(t) !== 'overforing'));
   const tempo = budsjett ? { budsjett, brukt, forventet: budsjett * (dagNr / dagerIMnd), andel: brukt / budsjett } : null;
 

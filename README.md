@@ -4,7 +4,7 @@ Personlig økonomisystem i nettleseren: kontantstrøm, transaksjoner, budsjett, 
 formuesskatt, formueshistorikk, import av kontoutskrifter/kortfakturaer, dokumentarkiv med uttrekk av tall,
 planlegging (prognose, faste utgifter, gjeldsplan, skatteprognose, sparemål og nettoformue-milepæler,
 boliglån/kjøpsevne, bilkostnad), innsikt (formueendring, belåning, skjulte kostnader, avvik), utlegg og
-refusjoner, skattesjekkliste, felles husholdning, krypto, garantier, uke-, måneds- og årsrapport (PDF),
+refusjoner, skattesjekkliste, flere år med budsjett per år, årsavslutning og sammenligning, felles husholdning, krypto, garantier, uke-, måneds- og årsrapport (PDF),
 eksport til regneark og kalender, påminnelser og notater. Kan installeres som app. Viderefører regnearket «Privatøkonomisk oversikt».
 
 - **App:** https://lilleseth.github.io/FinSys/ (etter at GitHub Pages er slått på)

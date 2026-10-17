@@ -10,6 +10,8 @@ import { passordProblem } from '../crypto.js';
 import { satserFor } from '../model/tax.js';
 import { r2 } from '../model/calc.js';
 import { xlsx, regnearkFraDb } from '../model/export.js';
+import { slaSammen } from '../import/merge.js';
+import { lasteAar } from '../model/years.js';
 import { lagKalender } from '../model/ical.js';
 
 const KONTO_TYPER = { brukskonto: 'Brukskonto', sparekonto: 'Sparekonto', bsu: 'BSU', kredittkort: 'Kredittkort', annet: 'Annet' };
@@ -26,7 +28,7 @@ export function render(el, params) {
   const jsonInput = h('input', { type: 'file', accept: '.json,application/json', hidden: true, onchange: (e) => importerJson(e.target.files[0]) });
   const importKort = h('section.kort#import',
     h('h2', 'Import'),
-    h('p', 'Importer regnearket «Privatøkonomisk oversikt» (.xlsx). Transaksjoner, kontoer, formue, gjeld, formueshistorikk, lønnsslipper og notater flyttes over, og kategoriene oversettes til den nye strukturen.'),
+    h('p', 'Importer regnearket «Privatøkonomisk oversikt» (.xlsx). Transaksjoner, kontoer, formue, gjeld, formueshistorikk, lønnsslipper og notater flyttes over, og kategoriene oversettes til den nye strukturen. Har du regneark for tidligere år, kan de legges til uten at noe blir dobbelt – da kan årene sammenlignes.'),
     h('div.knapperad', h('button.primar', { type: 'button', onclick: () => filInput.click() }, 'Velg regneark (.xlsx)'), filInput),
     h('p.dempet', 'Kontoutskrifter og kortfakturaer (CSV, Excel og PDF) importeres under ', h('a', { href: '#/import' }, 'Import'), '.'));
   el.append(importKort);
@@ -317,8 +319,18 @@ export function render(el, params) {
         h('p', h('strong', fil.name)),
         h('ul', res.logg.map((l) => h('li', l))),
         res.advarsler.length ? h('details', h('summary', `${res.advarsler.length} advarsler`), h('ul', res.advarsler.slice(0, 50).map((a) => h('li', a)))) : null,
-        harData ? h('p.advarsel', 'Du har allerede data i FinSys. Importen erstatter transaksjoner, kontoer, formue, lønnsslipper og notater. Kategorier og innstillinger beholdes. Last gjerne ned en sikkerhetskopi først.') : null),
-      knapper: [{ tekst: 'Avbryt' }, { tekst: harData ? 'Erstatt og importer' : 'Importer', type: harData ? 'fare' : 'primar', onclick: async () => {
+        harData ? h('div',
+          h('p', h('strong', 'Du har allerede data i FinSys. '), 'Velg hvordan regnearket skal brukes:'),
+          h('ul',
+            h('li', h('strong', 'Legg til: '), 'slår sammen med dataene du har – f.eks. regnearket for et tidligere år. Transaksjoner, verdier, frosne måneder og lønnsslipper som allerede finnes, hoppes over.'),
+            h('li', h('strong', 'Erstatt alt: '), 'transaksjoner, kontoer, formue, lønnsslipper og notater byttes ut med innholdet i regnearket. Kategorier og innstillinger beholdes.')),
+          lasteAar(db).length ? h('p.advarsel', `Låste år (${lasteAar(db).join(', ')}) røres ikke ved «Legg til», men blir erstattet ved «Erstatt alt».`) : null) : null),
+      knapper: [{ tekst: 'Avbryt' }, ...(harData ? [{ tekst: 'Legg til (slå sammen)', type: 'primar', onclick: async () => {
+        const logg = slaSammen(db, res.data);
+        store.changed();
+        await store.save();
+        dialog({ tittel: 'Regnearket er lagt til', innhold: h('ul', logg.map((l) => h('li', l))), knapper: [{ tekst: 'OK', type: 'primar', onclick: () => { location.hash = '#/oversikt'; } }] });
+      } }] : []), { tekst: harData ? 'Erstatt alt' : 'Importer', type: harData ? 'fare' : 'primar', onclick: async () => {
         const d = res.data;
         db.kontoer = d.kontoer;
         db.transaksjoner = d.transaksjoner;

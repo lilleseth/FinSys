@@ -1,7 +1,7 @@
 // Månedsrapport – vises som side og lagres som PDF via nettleserens utskrift.
 
 import { h, kr, krs, pct, datoNo, signert } from '../util.js';
-import { velg, sideTopp, tomTilstand } from '../ui.js';
+import { velg, sideTopp, tomTilstand, bekreft, toast } from '../ui.js';
 import { store } from '../store.js';
 import { lagRapport, lagAarsrapport, manederMedData, mndTekst } from '../model/report.js';
 import { skatteprognose } from '../model/tax.js';
@@ -9,6 +9,11 @@ import { fastePoster, oppsummerFaste } from '../model/recurring.js';
 import { kategoriIndeks } from '../model/categories.js';
 import { linjegraf, soylegraf, stolpeliste } from '../charts.js';
 import { ukeSammendrag, ukerMedData, ukenummer, sisteUke } from '../model/week.js';
+import { aarssjekk, lasAar, lasOppAar, kontrollerLast } from '../model/aarsavslutning.js';
+import { aarsinfo, budsjettKilde } from '../model/years.js';
+import { sammenlign, aarMedTransaksjoner } from '../model/compare.js';
+import { MND_KORT, MND_NAVN } from '../model/calc.js';
+import { ruter } from '../main.js';
 
 export function render(el, params) {
   const db = store.db;
@@ -21,9 +26,11 @@ export function render(el, params) {
   const periodeValg = (aktiv) => h('div.segment', { role: 'group', 'aria-label': 'Rapporttype' },
     h('a.knapp', { href: '#/rapport?periode=uke', class: aktiv === 'uke' ? 'aktiv' : '' }, 'Uke'),
     h('a.knapp', { href: '#/rapport', class: aktiv === 'mnd' ? 'aktiv' : '' }, 'Måned'),
-    h('a.knapp', { href: '#/rapport?periode=aar', class: aktiv === 'aar' ? 'aktiv' : '' }, 'År'));
+    h('a.knapp', { href: '#/rapport?periode=aar', class: aktiv === 'aar' ? 'aktiv' : '' }, 'År'),
+    h('a.knapp', { href: '#/rapport?periode=sammenlign', class: aktiv === 'sammenlign' ? 'aktiv' : '' }, 'Sammenlign'));
   if (params.periode === 'aar') return renderAar(el, params, mnder, periodeValg);
   if (params.periode === 'uke') return renderUke(el, params, periodeValg);
+  if (params.periode === 'sammenlign') return renderSammenlign(el, params, periodeValg);
   const mnd = params.mnd && mnder.includes(params.mnd) ? params.mnd : mnder[mnder.length - 1];
   const r = lagRapport(db, mnd, grunnlag);
   const idx = kategoriIndeks(db.kategorier);
@@ -158,6 +165,7 @@ function renderAar(el, params, mnder, periodeValg) {
   const aarValg = velg([...aarListe].reverse().map((a) => ({ verdi: a, tekst: a })), String(aar), { 'aria-label': 'År', onchange: (e) => { location.hash = `#/rapport?periode=aar&aar=${e.target.value}`; } });
   el.append(h('div.ikke-utskrift', sideTopp('Årsrapport', 'Året samlet, med sjekkliste for skattemeldingen. Velg «Lagre som PDF» i utskriftsdialogen.',
     periodeValg('aar'), aarValg, h('button.primar', { type: 'button', onclick: () => window.print() }, 'Lagre som PDF / skriv ut'))));
+  el.append(aarsstatus(db, aar));
 
   const tile = (navn, verdi, tillegg) => h('div.r-flis', h('div.r-flis-navn', navn), h('div.r-flis-verdi', verdi), h('div.r-flis-sml', tillegg));
   const mot = (na, for_, oppErBra = true) => {
@@ -240,4 +248,141 @@ function renderUke(el, params, periodeValg) {
         u.nyeSteder.length ? h('ul.r-liste', u.nyeSteder.map((t) => h('li', `${t.tekst} – ${kr(-t.belop)} kr`))) : h('p.dempet', 'Ingen nye steder.'))),
     h('section.r-seksjon', h('h2', 'Neste uke'),
       u.kommende.length ? h('ul.r-liste', u.kommende.map((p) => h('li', `${datoNo(p.neste)} ${p.navn} – ${signert(Math.round(p.belop))} kr`))) : h('p.dempet', 'Ingen faste trekk eller inntekter ventet.'))));
+}
+
+// Status for årsavslutning: sjekkliste og lås, eller låst med kontroll av endringer.
+function aarsstatus(db, aar) {
+  const info = aarsinfo(db, aar);
+  const boks = h('section.kort.aarsstatus.ikke-utskrift');
+  const ikon = { ok: '✓', advarsel: '▲', info: '○' };
+  if (info?.last) {
+    const kontroll = h('p.dempet', 'Kontrollerer at ingenting er endret siden låsing …');
+    boks.append(
+      h('div.kort-topp', h('h2', `🔒 ${aar} er avsluttet`), h('button.sekundar.liten', { type: 'button', onclick: async () => {
+        if (!(await bekreft(`Låse opp ${aar}?`, 'Da kan transaksjoner, formuesverdier, lønnsslipper og budsjett for året endres igjen. Lås gjerne året på nytt etterpå.', 'Lås opp'))) return;
+        lasOppAar(db, aar);
+        store.changed();
+        toast(`${aar} er låst opp`);
+        ruter();
+      } }, 'Lås opp')),
+      h('p', `Låst ${datoNo(info.lastDato.slice(0, 10))}. Transaksjoner (etter betalingsdato), formuesverdier, lønnsslipper og budsjett for ${aar} kan ikke endres, og import hopper over transaksjoner i året.`),
+      kontroll);
+    kontrollerLast(db, aar).then((k) => {
+      if (!k) return;
+      if (!k.transaksjonerEndret && !k.avvik.length) { kontroll.textContent = '✓ Ingenting er endret siden året ble låst.'; kontroll.className = 'kontroll-ok'; return; }
+      kontroll.className = 'advarsel';
+      kontroll.textContent = `⚠ Endret etter låsing${k.transaksjonerEndret ? ' – transaksjonene i året er ikke de samme som da året ble låst' : ''}. ${k.avvik.map((a) => `${a.navn}: ${kr(a.lagret)} → ${kr(a.na)}`).join(' · ')} (f.eks. endret kategoritype, eller fra en annen enhet med eldre app-versjon).`;
+    }).catch(() => { kontroll.textContent = ''; });
+    const neste = String(aar + 1);
+    if (budsjettKilde(db, neste).type !== 'eget') boks.append(h('p', h('a', { href: `#/budsjett?mnd=${neste}-01&rediger=1` }, `Lag budsjett for ${neste} →`)));
+    return boks;
+  }
+  const sjekk = aarssjekk(db, aar);
+  const advarsler = sjekk.filter((x) => x.alvor === 'advarsel');
+  boks.append(
+    h('div.kort-topp', h('h2', `Avslutt ${aar}`), h('span.dempet', info?.opplast ? `låst opp ${datoNo(info.opplast.slice(0, 10))}` : 'åpent år')),
+    h('p.dempet', 'Når året er ferdig og alt er importert, kan du låse det. Da kan ingenting i året endres ved et uhell, og tallene ligger fast for sammenligning med senere år.'),
+    h('ul.skattesjekk', sjekk.map((x) => h(`li.${x.alvor === 'ok' ? 'ok' : x.alvor === 'info' ? 'info' : 'mulighet'}`,
+      h('span.sjekk-ikon', { 'aria-hidden': 'true' }, ikon[x.alvor]),
+      h('div', x.lenke && x.alvor !== 'ok' ? h('a', { href: x.lenke }, x.tekst) : x.tekst)))),
+    h('div.knapperad', h('button.primar', { type: 'button', onclick: async () => {
+      const tekst = advarsler.length ? `Det er ${advarsler.length} punkt${advarsler.length === 1 ? '' : 'er'} som bør sjekkes først: ${advarsler.map((a) => a.tekst).join('; ')}. Låse likevel?` : `Alt ser ferdig ut. ${aar} låses, og du kan låse opp igjen senere om nødvendig.`;
+      if (!(await bekreft(`Avslutte og låse ${aar}?`, tekst, 'Lås året', advarsler.length ? 'fare' : 'primar'))) return;
+      await lasAar(db, aar);
+      store.changed();
+      toast(`${aar} er avsluttet og låst`);
+      ruter();
+    } }, `Avslutt og lås ${aar}`)));
+  return boks;
+}
+
+// Sammenligning mellom år
+function renderSammenlign(el, params, periodeValg) {
+  const db = store.db;
+  const alle = aarMedTransaksjoner(db);
+  const valgt = params.aar ? params.aar.split(',').filter((a) => alle.includes(a)) : alle.slice(-4);
+  const gaTil = (p) => { location.hash = `#/rapport?${new URLSearchParams({ periode: 'sammenlign', aar: valgt.join(','), ...(params.p ? { p: params.p } : {}), ...p })}`; };
+  const siste = valgt.at(-1);
+  const sisteMnd = Math.max(0, ...manederMedData(db).filter((m) => m.startsWith(siste || '')).map((m) => Number(m.slice(5, 7))));
+  const periode = params.p || (sisteMnd < 12 ? 'samme' : 'hele');
+  document.title = 'FinSys sammenligning av år';
+  const aarBokser = h('div.aar-valg', { role: 'group', 'aria-label': 'År' }, alle.map((a) => h('label.avkryss', h('input', { type: 'checkbox', checked: valgt.includes(a), onchange: (e) => {
+    const ny = e.target.checked ? [...valgt, a].sort() : valgt.filter((x) => x !== a);
+    gaTil({ aar: ny.join(',') });
+  } }), ` ${a}`)));
+  el.append(h('div.ikke-utskrift', sideTopp('Sammenligning', 'Nøkkeltall og kategorier år mot år, etter betalingsmåned.',
+    periodeValg('sammenlign'),
+    h('div.segment', { role: 'group', 'aria-label': 'Periode' },
+      h('button', { type: 'button', class: periode === 'samme' ? 'aktiv' : '', onclick: () => gaTil({ p: 'samme' }) }, sisteMnd && sisteMnd < 12 ? `Jan–${MND_KORT[sisteMnd - 1]}` : 'Samme periode'),
+      h('button', { type: 'button', class: periode === 'hele' ? 'aktiv' : '', onclick: () => gaTil({ p: 'hele' }) }, 'Hele år')),
+    h('button.primar', { type: 'button', onclick: () => window.print() }, 'Lagre som PDF / skriv ut')),
+    alle.length > 1 ? aarBokser : null));
+
+  if (alle.length < 2 || valgt.length < 2) {
+    el.append(tomTilstand(alle.length < 2 ? 'Bare ett år med data' : 'Velg minst to år',
+      alle.length < 2 ? `Det finnes transaksjoner for ${alle[0] || 'ingen år'} ennå. Sammenligningen fylles ut automatisk når neste år kommer – eller legg inn tidligere år nå: importer regnearket for et tidligere år (Innstillinger → Import → «Legg til»), eller kontoutskrifter fra banken under Import.` : 'Kryss av for to eller flere år over.',
+      ...(alle.length < 2 ? [h('a.knapp.sekundar', { href: '#/innstillinger?vis=import' }, 'Importer regneark'), h('a.knapp.sekundar', { href: '#/import' }, 'Importer kontoutskrifter')] : [])));
+    return;
+  }
+
+  const c = sammenlign(db, valgt, { periode });
+  const n = c.rader.length;
+  const na = c.rader.at(-1);
+  const for_ = c.rader.at(-2);
+  const endring = (a, b, oppErBra = true, prosent = true) => {
+    if (a == null || b == null) return h('td.tall', '–');
+    const d = a - b;
+    const bra = Math.abs(d) < 0.5 ? null : oppErBra ? d > 0 : d < 0;
+    return h('td.tall', { class: bra == null ? '' : bra ? 'pos' : 'neg' }, `${signert(Math.round(d))}${prosent && b ? ` (${d >= 0 ? '+' : '−'}${Math.round(Math.abs(d / b) * 100)} %)` : ''}`);
+  };
+  const rad = (navn, felt, { oppErBra = true, fmt = (v) => kr(v), pp = false } = {}) => h('tr',
+    h('td', navn),
+    ...c.rader.map((r) => h('td.tall', r[felt] == null ? '–' : fmt(r[felt]))),
+    pp ? h('td.tall', na[felt] != null && for_[felt] != null ? `${na[felt] >= for_[felt] ? '+' : '−'}${String(Math.abs(Math.round((na[felt] - for_[felt]) * 1000) / 10)).replace('.', ',')} pp` : '–') : endring(na[felt], for_[felt], oppErBra));
+  const farger = ['s1', 's2', 's3'];
+  const graf = c.rader.slice(-3).reverse();
+  const hode = h('thead', h('tr', h('th', ''), ...c.rader.map((r) => h('th.tall', r.aar)), h('th.tall', `${na.aar} mot ${for_.aar}`)));
+
+  const kategoriTabell = (type) => {
+    const liste = c.kategorier.filter((k) => k.type === type).sort((a, b) => b.verdier.at(-1) - a.verdier.at(-1));
+    const tbody = h('tbody');
+    for (const k of liste) {
+      const underRader = k.under.map((u) => h('tr.under', { hidden: true }, h('td', u.navn), ...u.verdier.map((v) => h('td.tall', kr(v))), endring(u.verdier.at(-1), u.verdier.at(-2), type === 'inntekt')));
+      tbody.append(h('tr.gruppe', { class: underRader.length ? 'klikkbar' : '', title: underRader.length ? 'Vis underkategorier' : null, onclick: () => underRader.forEach((r) => { r.hidden = !r.hidden; }) },
+        h('td', k.navn, underRader.length ? h('span.dempet', ' ▸') : null), ...k.verdier.map((v) => h('td.tall', kr(v))), endring(k.verdier.at(-1), k.verdier.at(-2), type === 'inntekt')), ...underRader);
+    }
+    const tot = c.rader.map((r) => (type === 'utgift' ? r.forbruk : r.inntekt));
+    tbody.append(h('tr.delsum', h('td', 'Sum'), ...tot.map((v) => h('td.tall', kr(v))), endring(tot.at(-1), tot.at(-2), type === 'inntekt')));
+    return h('div.tabell-holder', h('table.tabell.kompakt.sammenlign', hode.cloneNode(true), tbody));
+  };
+
+  el.append(h('article.rapport',
+    h('header.r-topp',
+      h('div', h('div.r-merke', 'FinSys · Sammenligning'), h('h1', c.aar.join(' – '))),
+      h('div.r-meta', c.antallMnd === 12 ? 'Hele år' : `Samme periode: ${c.periodeTekst}`, h('br'), 'Etter betalingsmåned')),
+    c.oppsummering ? h('section.r-seksjon', h('p', c.oppsummering)) : null,
+    h('section.r-seksjon', h('h2', 'Nøkkeltall'),
+      h('div.tabell-holder', h('table.tabell.kompakt.sammenlign', hode,
+        h('tbody',
+          rad('Inntekter', 'inntekt'),
+          rad('Forbruk', 'forbruk', { oppErBra: false }),
+          rad('Spart (netto)', 'netto'),
+          rad('Sparerate', 'sparerate', { fmt: (v) => pct(v), pp: true }),
+          rad('Investert', 'investert'),
+          rad('Snitt forbruk per måned', 'snittForbruk', { oppErBra: false }),
+          c.rader.some((r) => r.lonnBrutto != null) ? rad('Bruttolønn (lønnsslipper)', 'lonnBrutto') : null,
+          c.rader.some((r) => r.skattetrekk != null) ? rad('Skattetrekk', 'skattetrekk', { oppErBra: false }) : null,
+          c.rader.some((r) => r.utbytte != null) ? rad('Utbytte', 'utbytte') : null,
+          c.rader.some((r) => r.nettoformue != null) ? rad(`Nettoformue ved utgangen av ${MND_NAVN[c.antallMnd - 1].toLowerCase()}`, 'nettoformue') : null,
+          c.rader.some((r) => r.gjeld != null) ? rad('Gjeld', 'gjeld', { oppErBra: false }) : null)))),
+    h('div.r-to',
+      h('section.r-seksjon', h('h2', 'Inntekter, forbruk og sparing'),
+        soylegraf({ kategorier: ['Inntekter', 'Forbruk', 'Spart'], serier: graf.map((r, i) => ({ navn: r.aar, verdier: [r.inntekt, r.forbruk, r.netto], klasse: farger[i] })), format: krs })),
+      h('section.r-seksjon', h('h2', 'Forbruk per måned'),
+        soylegraf({ kategorier: MND_KORT.slice(0, c.antallMnd), titler: MND_NAVN.slice(0, c.antallMnd), serier: graf.map((r, i) => ({ navn: r.aar, verdier: r.perMnd, klasse: farger[i] })), format: krs }))),
+    c.endringer.length ? h('section.r-seksjon', h('h2', `Største endringer ${na.aar} mot ${for_.aar}`),
+      h('ul.r-liste', c.endringer.map((e) => h('li', `${e.navn}: ${kr(e.for_)} → ${kr(e.na)} kr (${e.diff >= 0 ? '+' : '−'}${kr(Math.abs(e.diff))} kr${e.pst != null ? `, ${e.diff >= 0 ? '+' : '−'}${Math.round(Math.abs(e.pst) * 100)} %` : ''})`)))) : null,
+    h('section.r-seksjon', h('h2', 'Forbruk per kategori'), h('p.dempet.ikke-utskrift', 'Klikk på en kategori for å se underkategoriene.'), kategoriTabell('utgift')),
+    h('section.r-seksjon', h('h2', 'Inntekter per kategori'), kategoriTabell('inntekt')),
+    n > 3 ? h('p.dempet', 'Grafene viser de tre siste årene; tabellene viser alle valgte år.') : null));
 }

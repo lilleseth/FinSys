@@ -7,11 +7,12 @@ import { kategoriIndeks } from '../model/categories.js';
 import { fastePoster, oppsummerFaste } from '../model/recurring.js';
 import { prognose } from '../model/forecast.js';
 import { laan, scenarier, nedbetaleEllerInvestere, sluttdato } from '../model/debt.js';
-import { skatteprognose, skattesjekkliste } from '../model/tax.js';
+import { skatteprognose, skattesjekkliste, SKATTESATSER } from '../model/tax.js';
 import { verdiPa, MND_KORT, formue as beregnFormue } from '../model/calc.js';
 import { mndTekst } from '../model/report.js';
 import { linjegraf, soylegraf, stolpeliste } from '../charts.js';
 import { kjopsevne, standardverdier, REGLER } from '../model/housing.js';
+import { budsjettFor } from '../model/years.js';
 import { bilkostnad } from '../model/car.js';
 import { nettoformuePrognose } from '../model/networth.js';
 
@@ -50,7 +51,7 @@ function visPrognose(el, params, tegnPaNytt) {
   const maneder = Number(params.mnd || 12);
   const kilde = params.kilde === 'budsjett' ? 'budsjett' : 'snitt';
   const p = prognose(db, { maneder, kilde });
-  const harBudsjett = Object.keys(db.budsjett?.poster || {}).length > 0;
+  const harBudsjett = Object.keys(budsjettFor(db, p.start.slice(0, 4))).length > 0;
   const lenke = (x) => `#/planlegging?${new URLSearchParams({ fane: 'prognose', mnd: maneder, kilde, ...x })}`;
   const snittNetto = p.rader.reduce((s, r) => s + r.netto, 0) / p.rader.length;
   const skatt = skatteprognose(db, Number(p.sisteData.slice(0, 4)));
@@ -218,6 +219,7 @@ function visSkatt(el, params, tegnPaNytt) {
   const rad = (navn, verdi, klasse) => h('tr', { class: klasse || '' }, h('td', navn), h('td.tall', kr(verdi)));
   fyll(el, 
     h('div.fane-valg', velg(aarListe.map((a) => ({ verdi: a, tekst: `Inntektsåret ${a}` })), String(aar), { 'aria-label': 'År', onchange: (e) => { location.hash = `#/planlegging?fane=skatt&aar=${e.target.value}`; } })),
+    t.satser.estimert ? h('p.advarsel', `Skattesatsene for ${aar} er ikke lagt inn ennå – beregningen bruker satsene for ${Object.keys(SKATTESATSER).sort().filter((x) => x <= String(aar)).pop() || 'siste kjente år'}. Legg inn nye satser under Innstillinger → Skattesatser når statsbudsjettet er vedtatt.`) : null,
     h('section.fliser',
       flis('Beregnet skatt', krs(t.sumSkatt), `effektivt ${pct(t.effektivSats)}`),
       flis('Trukket (anslag for året)', krs(t.trukket), `${kr(t.trekkHittil)} kr trukket hittil`),

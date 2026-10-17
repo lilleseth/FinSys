@@ -115,6 +115,20 @@ Netto kontantstrøm per betalingsmåned tilsvarer radene 8–30 i Kontantstrøm-
    - *Skattesjekkliste* (Planlegging → Skatt): IPS, BSU, fagforening, gaver, rentefradrag, reisefradrag, ASK,
      tap utenfor ASK, krypto, formuesskatt og restskatt – med anslått skattebesparelse
 
+8. **Flere år** *(ferdig)*:
+   - Et år regnes etter betalingsdato (som kontantstrømmen og datafilene `transaksjoner-ÅÅÅÅ`)
+   - *Budsjett per år*: nytt år bruker forrige års budsjett til du lager et eget; forslag fra faktisk forbruk
+     i fjor + prisvekst
+   - *Årsavslutning* (Rapport → År): sjekkliste (kategorisert, importert ut året, desember fryst, lønnsslipper,
+     utbytte, utlegg) og «Avslutt og lås». Låst år: transaksjoner, formuesverdier, frosne måneder, lønnsslipper
+     og budsjett kan ikke endres; import hopper over året. Sammendrag og SHA-256-kontrollsum lagres ved låsing,
+     og endringer etterpå varsles. Kan låses opp
+   - *Sammenligning* (Rapport → Sammenlign): nøkkeltall, kategorier (med underkategorier), forbruk per måned,
+     største endringer og automatisk oppsummering – samme periode (f.eks. jan–sep) eller hele år; utskrift/PDF
+   - Kort på oversikten: hittil i år mot samme periode i fjor
+   - *Importer tidligere år*: regneark kan legges til (slås sammen) uten duplikater
+   - Påminnelser: avslutt forrige år (jan–apr) og lag budsjett for nytt år
+
 ## Forslag til videre utvidelser
 
 | Forslag | Nytte |

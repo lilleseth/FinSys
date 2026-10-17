@@ -4,6 +4,7 @@ import { kategoriIndeks } from './categories.js';
 import { fastePoster } from './recurring.js';
 import { mndSammendrag, manederMedData, flyttMnd, mndTekst } from './report.js';
 import { verdiPa, sum } from './calc.js';
+import { budsjettFor } from './years.js';
 
 // Likvide midler nå: bankkontoer med siste registrerte saldo + transaksjoner etter den datoen.
 export function likvideNa(db) {
@@ -39,7 +40,7 @@ export function prognose(db, { maneder = 12, kilde = 'snitt' } = {}) {
   // Skatt (restskatt) er engangsposter og legges inn som planlagte poster i stedet
   for (const k of db.kategorier.filter((x) => x.type === 'utgift' && x.id !== 'skatt')) {
     const snitt = historikk.length ? -sum(historikk.map((s) => s.perHoved.get(k.id) || 0)) / historikk.length : 0;
-    const budsjett = db.budsjett?.poster?.[k.id];
+    const budsjett = budsjettFor(db, start.slice(0, 4))[k.id];
     const grunnlag = kilde === 'budsjett' && budsjett != null ? budsjett : snitt;
     const variabel = Math.max(0, grunnlag - (fastPerHoved.get(k.id) || 0));
     if (variabel >= 1) variabelPerHoved.set(k.id, variabel);

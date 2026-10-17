@@ -157,8 +157,10 @@ export function regnearkFraDb(db) {
   ark.push({ navn: 'Formueshistorikk', kolonner: ['Dato', ...HISTORIKK_FELT.map(([, n]) => n), 'Nettoformue'], bredder: [11, ...HISTORIKK_FELT.map(() => 13), 14],
     rader: (db.formue.historikk || []).slice().sort((a, b) => a.dato.localeCompare(b.dato)).map((x) => [x.dato, ...HISTORIKK_FELT.map(([f]) => krCelle(x.grupper?.[f])), krCelle(x.nettoformue)]) });
   // Budsjett
-  const bud = Object.entries(db.budsjett?.poster || {});
-  if (bud.length) ark.push({ navn: 'Budsjett', kolonner: ['Kategori', 'Budsjett per måned'], bredder: [30, 18], rader: bud.map(([id, b]) => [idx.hent(id)?.navn || idx.hoved.get(id)?.navn || id, krCelle(b)]) });
+  const perAar = db.budsjett?.perAar && Object.keys(db.budsjett.perAar).length ? db.budsjett.perAar : (Object.keys(db.budsjett?.poster || {}).length ? { Budsjett: db.budsjett.poster } : {});
+  const budAar = Object.keys(perAar).sort();
+  const budIder = [...new Set(budAar.flatMap((a) => Object.keys(perAar[a])))];
+  if (budIder.length) ark.push({ navn: 'Budsjett', kolonner: ['Kategori', ...budAar.map((a) => `${a} per måned`)], bredder: [30, ...budAar.map(() => 16)], rader: budIder.map((id) => [idx.hent(id)?.navn || idx.hoved.get(id)?.navn || id, ...budAar.map((a) => krCelle(perAar[a][id]))]) });
   // Faste poster
   const faste = fastePoster(db);
   if (faste.length) ark.push({ navn: 'Faste poster', kolonner: ['Navn', 'Kategori', 'Type', 'Hver n. måned', 'Beløp', 'Per måned', 'Per år', 'Sist', 'Neste', 'Stoppet'], bredder: [30, 24, 9, 12, 12, 12, 12, 11, 11, 9],

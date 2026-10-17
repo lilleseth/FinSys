@@ -190,6 +190,11 @@ tr.valgt td { background: var(--aksent-vask); }
 .skattesjekk li.ok .sjekk-ikon { color: var(--pos); }
 .skattesjekk li.info .sjekk-ikon { color: var(--dempet); }
 .skattesjekk .gevinst { color: var(--pos); font-weight: 600; font-size: 0.85rem; }
+.knapp-gruppe { display: inline-flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; }
+.aar-valg { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; margin-top: 0.5rem; justify-content: flex-end; }
+.tabell.sammenlign tr.gruppe.klikkbar { cursor: pointer; }
+.tabell.sammenlign tr.under td:first-child { padding-left: 1.5rem; color: var(--tekst-2); }
+.aarsstatus h2 { margin: 0; }
 .sjekkliste { list-style: none; padding: 0; margin: 0 0 0.75rem; display: grid; gap: 0.3rem; }
 .sjekkliste li.ok { color: var(--pos); }
 .sjekkliste li.feil { color: var(--neg); }
@@ -240,7 +245,7 @@ details summary { cursor: pointer; color: var(--tekst-2); }
 .hovednav { display: flex; gap: 0.15rem; overflow-x: auto; flex: 1; scrollbar-width: none; }
 @media (min-width: 641px) { .hovednav { flex-wrap: wrap; overflow: visible; padding: 0.35rem 0; } }
 .hovednav a {
-  padding: 0.45rem 0.7rem;
+  padding: 0.45rem 0.6rem;
   border-radius: 8px;
   color: var(--tekst-2);
   text-decoration: none;

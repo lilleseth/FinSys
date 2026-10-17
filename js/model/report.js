@@ -4,6 +4,7 @@ import { kategoriIndeks } from './categories.js';
 import { mndFor, formue, verdiPa, MND_NAVN, MND_KORT, sum, r2 } from './calc.js';
 import { normaliser } from './rules.js';
 import { budsjettStatus } from '../views/budget.js';
+import { budsjettFor } from './years.js';
 import { kr, pct } from '../util.js';
 
 export function flyttMnd(mnd, n) {
@@ -114,7 +115,7 @@ export function lagRapport(db, mnd, grunnlag = 'betalt') {
   const nyeSteder = [...nye.values()].filter((x) => x.belop <= -200).sort((a, b) => a.belop - b.belop).slice(0, 8);
 
   // Budsjett
-  const harBudsjett = Object.keys(db.budsjett?.poster || {}).length > 0;
+  const harBudsjett = Object.keys(budsjettFor(db, mnd.slice(0, 4))).length > 0;
   const budsjett = harBudsjett ? budsjettStatus(db, mnd, grunnlag) : null;
 
   // Formue og gjeld

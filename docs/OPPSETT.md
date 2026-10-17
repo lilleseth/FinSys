@@ -64,6 +64,10 @@ låses appen etter 15 minutter uten aktivitet.
 velger du meny → «Installer app». På PC/Mac (Chrome/Edge) bruker du installer-ikonet i adressefeltet.
 Se også Innstillinger → «Installer som app».
 
+**Årsskiftet:** I januar importerer du det siste for desember, fryser formuen per 31.12 (Formue → «Frys måned»)
+og avslutter året under Rapport → År → «Avslutt og lås». Lag så budsjett for det nye året under Budsjett
+(«Fra faktisk forbruk i fjor»). Under Rapport → Sammenlign ser du årene mot hverandre.
+
 **Token-utløp:** Skriv tokenens utløpsdato inn under Innstillinger → Datalager («Token utløper»), så
 minner oversikten deg på å lage en ny tre uker før.
 

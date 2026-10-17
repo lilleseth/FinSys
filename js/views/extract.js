@@ -8,6 +8,7 @@ import { hentDokument } from '../model/documents.js';
 import { pdfLinjer } from '../import/pdf.js';
 import { INVESTERING, verdiPa } from '../model/calc.js';
 import { ruter } from '../main.js';
+import { erLastDato, lastMelding } from '../model/years.js';
 
 const LONN_FELT = [
   ['fastlonn', 'Fastlønn'], ['overtid50', 'Overtid 50 %'], ['overtid100', 'Overtid 100 %'], ['engang', 'Engangsposter'],
@@ -54,6 +55,7 @@ function koble(d, postId) {
 }
 
 function settVerdi(post, dato, verdi, kilde) {
+  if (erLastDato(store.db, dato)) throw new Error(lastMelding(dato.slice(0, 4)));
   post.verdier ||= [];
   const finnes = post.verdier.find((v) => v.dato === dato);
   if (finnes) Object.assign(finnes, { verdi, kilde });
@@ -87,6 +89,7 @@ export function lonnsslippDialog({ mnd, arbeidsgiver = '', funn = {}, dokument =
       { tekst: 'Avbryt' },
       { tekst: 'Lagre lønnsslipp', type: 'primar', onclick: () => {
         if (!mndInp.value) { toast('Velg måned', 'feil'); return false; }
+        if (erLastDato(db, mndInp.value)) { toast(lastMelding(mndInp.value.slice(0, 4)), 'feil'); return false; }
         const verdier = {};
         for (const [k] of LONN_FELT) {
           const v = lesBelop(felter[k].inp.value);
@@ -136,6 +139,7 @@ function lanDialog(r, d) {
     knapper: [
       { tekst: 'Avbryt' },
       { tekst: 'Lagre', type: 'primar', onclick: () => {
+        if (erLastDato(db, dato.value)) { toast(lastMelding(dato.value.slice(0, 4)), 'feil'); return false; }
         const p = poster.find((x) => x.id === post.value);
         if (!p) { toast('Velg hvilket lån tallene gjelder', 'feil'); return false; }
         const s = lesBelop(saldo.inp.value);
@@ -174,6 +178,7 @@ function investeringDialog(r, d) {
     knapper: [
       { tekst: 'Avbryt' },
       { tekst: 'Lagre', type: 'primar', onclick: () => {
+        if (erLastDato(db, dato.value)) { toast(lastMelding(dato.value.slice(0, 4)), 'feil'); return false; }
         const p = poster.find((x) => x.id === post.value);
         const v = lesBelop(verdi.inp.value);
         if (!p || v == null || !dato.value) { toast('Velg post og fyll inn verdi og dato', 'feil'); return false; }

@@ -9,6 +9,7 @@ import { linjegraf, soylegraf, stolpeliste } from '../charts.js';
 import { paminnelser } from '../model/reminders.js';
 import { ruter } from '../main.js';
 import { ukeSammendrag } from '../model/week.js';
+import { sammenlign } from '../model/compare.js';
 
 export function render(el, params) {
   const db = store.db;
@@ -52,6 +53,26 @@ export function render(el, params) {
     flis(`Forbruk ${aar}`, krs(n.forbruk), mndAntall ? `snitt ${kr(n.forbruk / mndAntall)} kr/mnd` : ''),
     flis(`Utbytte ${aar}`, krs(n.utbytte), 'registrert hittil i år')
   ));
+
+  // Mot samme periode i fjor
+  const iFjor = String(Number(aar) - 1);
+  if (aarListe.includes(iFjor)) {
+    const c = sammenlign(db, [iFjor, aar], { periode: 'samme' });
+    const [f, n] = c.rader;
+    if (f.medData) {
+      const d = (a, b, oppErBra = true) => {
+        const x = a - b;
+        return h('span', { class: Math.abs(x) < 1 ? '' : (oppErBra ? x > 0 : x < 0) ? 'pos' : 'neg' }, `${signert(Math.round(x))} kr`);
+      };
+      el.append(h('section.kort.mot-ifjor',
+        h('div.kort-topp', h('h2', `Mot samme periode ${iFjor}`, h('span.dempet', ` · ${c.periodeTekst}`)), h('a', { href: `#/rapport?periode=sammenlign&aar=${iFjor},${aar}` }, 'Sammenlign år')),
+        h('div.fliser',
+          flis('Inntekter', d(n.inntekt, f.inntekt), `${kr(n.inntekt)} mot ${kr(f.inntekt)} kr`),
+          flis('Forbruk', d(n.forbruk, f.forbruk, false), `${kr(n.forbruk)} mot ${kr(f.forbruk)} kr`),
+          flis('Spart', d(n.netto, f.netto), `${kr(n.netto)} mot ${kr(f.netto)} kr`),
+          flis('Sparerate', n.sparerate != null && f.sparerate != null ? `${n.sparerate >= f.sparerate ? '+' : '−'}${String(Math.abs(Math.round((n.sparerate - f.sparerate) * 1000) / 10)).replace('.', ',')} pp` : '–', `${pct(n.sparerate)} mot ${pct(f.sparerate)}`))));
+    }
+  }
 
   // Påminnelser
   const liste = paminnelser(db, { vault: store.vault });

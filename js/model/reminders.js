@@ -10,6 +10,7 @@ import { garantier } from './documents.js';
 import { oppgjorsoversikt } from './household.js';
 import { utleggsoversikt } from './outlays.js';
 import { avvik } from './insight.js';
+import { aarFor, erLastAar, budsjettKilde } from './years.js';
 
 const dagerMellom = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 86400000);
 const mndNavn = (mnd) => `${MND_NAVN[Number(mnd.slice(5, 7)) - 1].toLowerCase()} ${mnd.slice(0, 4)}`;
@@ -111,6 +112,20 @@ export function paminnelser(db, { idag = new Date().toISOString().slice(0, 10), 
   const grense = new Date(Date.parse(idag) - 30 * 86400000).toISOString().slice(0, 10);
   for (const a of avvik(db, { idag, dager: 30 }).filter((x) => ['dobbel', 'gebyr'].includes(x.type) && (x.dato || '') >= grense)) {
     legg(`avvik-${a.id}`, 'middels', a.tekst, '#/innsikt?fane=avvik');
+  }
+
+  // Nytt år: avslutt forrige år og lag budsjett
+  {
+    const iAar = Number(idag.slice(0, 4));
+    const mndNr = Number(idag.slice(5, 7));
+    const forrige = String(iAar - 1);
+    if (mndNr <= 4 && db.transaksjoner.some((t) => aarFor(t) === forrige) && !erLastAar(db, forrige)) {
+      legg(`avslutt-${forrige}`, mndNr >= 2 ? 'middels' : 'info', `Avslutt ${forrige}: importer det siste, frys desember og lås året`, `#/rapport?periode=aar&aar=${forrige}`);
+    }
+    const kilde = budsjettKilde(db, String(iAar));
+    if (kilde.type === 'videreført' && db.transaksjoner.some((t) => aarFor(t) === String(iAar))) {
+      legg(`budsjett-nytt-${iAar}`, 'info', `Lag budsjett for ${iAar} – nå brukes budsjettet${kilde.fra ? ` fra ${kilde.fra}` : ' fra i fjor'}`, `#/budsjett?mnd=${iAar}-01&rediger=1`);
+    }
   }
 
   // Huskeliste

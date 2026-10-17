@@ -11,7 +11,7 @@ export function nyDatabase() {
     kontoer: [],
     kategorier: structuredClone(STANDARD_KATEGORIER),
     innstillinger: { nodvendigeUtgifterPerMnd: null, skatt: { rentefradrag: 0.22, bunnfradrag: 1900000, formuesskattSats: 0.01, rabattAksjer: 0.2 } },
-    budsjett: { poster: {} },
+    budsjett: { poster: {}, perAar: {} },
     regler: [],
     transaksjonsAr: [],
     transaksjoner: [],

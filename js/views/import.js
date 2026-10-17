@@ -8,6 +8,7 @@ import { finnKonto, merkDuplikater, foreslåAlle, tilTransaksjoner } from '../im
 import { kategoriIndeks } from '../model/categories.js';
 import { verdiPa } from '../model/calc.js';
 import { lastOppDokument } from '../model/documents.js';
+import { erLastTransaksjon } from '../model/years.js';
 
 const SIKKERHET = {
   regel: ['Regel', 'sik-regel'],
@@ -158,7 +159,10 @@ export function render(el) {
 
     async function importer() {
       const valgte = res.rader.filter((r) => !r.duplikat && r.velg);
-      const nye = tilTransaksjoner(valgte, kontoId, res.filnavn);
+      const alle = tilTransaksjoner(valgte, kontoId, res.filnavn);
+      // Transaksjoner i låste år hoppes over
+      const nye = alle.filter((t) => !erLastTransaksjon(db, t));
+      const hoppetOver = alle.length - nye.length;
       let dok = allerede || null;
       if (arkiver && !allerede) {
         try { dok = await arkiverFil(); } catch (e) { toast(`Filen ble ikke arkivert: ${e.message}`, 'feil'); }
@@ -171,7 +175,7 @@ export function render(el) {
         if (res.kontoHint.kortType) konto.importFormat = res.kontoHint.kortType;
       }
       store.changed();
-      toast(`${nye.length} transaksjoner importert`);
+      toast(hoppetOver ? `${nye.length} transaksjoner importert – ${hoppetOver} i låst år ble hoppet over` : `${nye.length} transaksjoner importert`, hoppetOver ? 'feil' : 'info');
       clear(kort).append(
         h('div.kort-topp', h('h2', res.filnavn), h('button.lenke', { type: 'button', onclick: () => kort.remove() }, 'lukk')),
         h('p.kontroll-ok', `✓ ${nye.length} transaksjoner importert til ${konto?.navn || kontoId}.`),
@@ -300,7 +304,7 @@ export function redigerRegelDialog(r, ny, ferdig) {
     if (brukNa.checked) {
       const nal = r.inneholder.toLowerCase();
       for (const t of db.transaksjoner) {
-        if (t.kategori === r.kategori) continue;
+        if (t.kategori === r.kategori || erLastTransaksjon(db, t)) continue;
         if (r.konto && t.konto !== r.konto) continue;
         if (r.retning === 'inn' && t.belop < 0) continue;
         if (r.retning === 'ut' && t.belop > 0) continue;

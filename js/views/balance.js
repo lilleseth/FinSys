@@ -4,6 +4,7 @@ import { h, clear, kr, krs, pct, datoNo, uid, lesBelop } from '../util.js';
 import { felt, velg, dialog, bekreft, sideTopp, flis, toast } from '../ui.js';
 import { store } from '../store.js';
 import { vedlegg } from './documents.js';
+import { erLastDato, lastMelding } from '../model/years.js';
 import { formue, gjeldsdetaljer, formuesskatt, lagSnapshot, avkastning, EIENDEL_TYPER, GJELD_TYPER, HISTORIKK_FELT, INVESTERING, MND_NAVN, sum, r2 } from '../model/calc.js';
 
 export function render(el) {
@@ -170,13 +171,14 @@ export function render(el) {
       clear(vListe).append(verdier.length
         ? h('table.tabell.kompakt', h('thead', h('tr', h('th', 'Dato'), h('th.tall', p.side === 'gjeld' ? 'Saldo' : 'Verdi'), h('th', 'Kilde'), h('th'))),
           h('tbody', [...verdier].sort((a, b) => b.dato.localeCompare(a.dato)).map((v) => h('tr', h('td', datoNo(v.dato)), h('td.tall', kr(v.verdi, true)), h('td.dempet', v.kilde || ''),
-            h('td', h('button.lenke', { type: 'button', onclick: () => { verdier.splice(verdier.indexOf(v), 1); tegnVerdier(); } }, 'fjern'))))))
+            h('td', erLastDato(db, v.dato) ? h('span.dempet', { title: lastMelding(v.dato.slice(0, 4)) }, '🔒') : h('button.lenke', { type: 'button', onclick: () => { verdier.splice(verdier.indexOf(v), 1); tegnVerdier(); } }, 'fjern'))))))
         : h('p.dempet', 'Ingen verdier ennå.'));
     };
     tegnVerdier();
     const leggTil = () => {
       const v = lesBelop(nyVerdi.value);
       if (v == null || !nyDato.value) { toast('Fyll inn dato og verdi', 'feil'); return; }
+      if (erLastDato(db, nyDato.value)) { toast(lastMelding(nyDato.value.slice(0, 4)), 'feil'); return; }
       const i = verdier.findIndex((x) => x.dato === nyDato.value);
       if (i >= 0) verdier.splice(i, 1);
       verdier.push({ dato: nyDato.value, verdi: v, kilde: nyKilde.value.trim() || 'Manuell' });
@@ -320,6 +322,7 @@ export function render(el) {
       innhold: h('div', h('p', 'Lagrer verdiene som gjaldt ved slutten av måneden i formueshistorikken. Sørg for at alle poster har verdi pr. månedsslutt (fra meglerrapporter, kontoutskrift og låneoversikt).'), felt('Måned', mnd)),
       knapper: [{ tekst: 'Avbryt' }, { tekst: 'Lagre', type: 'primar', onclick: async () => {
         if (!mnd.value) return false;
+        if (erLastDato(db, mnd.value)) { toast(lastMelding(mnd.value.slice(0, 4)), 'feil'); return false; }
         const snap = lagSnapshot(db, mnd.value);
         const finnes = db.formue.historikk.find((x) => x.mnd === mnd.value);
         if (finnes) {
