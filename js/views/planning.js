@@ -7,7 +7,7 @@ import { kategoriIndeks } from '../model/categories.js';
 import { fastePoster, oppsummerFaste } from '../model/recurring.js';
 import { prognose } from '../model/forecast.js';
 import { laan, scenarier, nedbetaleEllerInvestere, sluttdato } from '../model/debt.js';
-import { skatteprognose } from '../model/tax.js';
+import { skatteprognose, skattesjekkliste } from '../model/tax.js';
 import { verdiPa, MND_KORT, formue as beregnFormue } from '../model/calc.js';
 import { mndTekst } from '../model/report.js';
 import { linjegraf, soylegraf, stolpeliste } from '../charts.js';
@@ -229,6 +229,18 @@ function visSkatt(el, params, tegnPaNytt) {
         t.ekstraTrekkProsent && t.gjenstaende >= 2 ? h('li', `Alternativt: endre skattekortet nå og øk prosenttrekket med ca. ${Math.ceil(t.ekstraTrekkProsent * 100)} prosentpoeng resten av året.`) : null,
         h('li', `For neste år: med dagens inntekt bør trekket være ca. ${pct(t.sumSkatt / Math.max(1, t.personinntekt))} av bruttolønn.`)))
       : rest < -1000 ? h('p.kontroll-ok', `✓ Det ser ut til at du har trukket nok – ca. ${kr(-rest)} kr til gode.`) : h('p.kontroll-ok', '✓ Trekket ser ut til å stemme med skatten.'),
+    (() => {
+      const liste = skattesjekkliste(db, aar);
+      const sum = liste.reduce((a, x) => a + (x.status === 'mulighet' && x.gevinst ? x.gevinst : 0), 0);
+      const ikon = { mulighet: '●', info: '○', ok: '✓' };
+      return h('section.kort.sjekk-skatt',
+        h('h2', 'Sjekkliste: fradrag og muligheter'),
+        sum > 0 ? h('p', `Mulig lavere skatt hvis du bruker mulighetene: `, h('strong', `opptil ca. ${kr(sum)} kr`), '.') : null,
+        h('ul.skattesjekk', liste.map((x) => h(`li.${x.status}`,
+          h('span.sjekk-ikon', { 'aria-hidden': 'true' }, ikon[x.status]),
+          h('div', h('strong', x.tittel), x.gevinst && x.status === 'mulighet' ? h('span.gevinst', ` spar ca. ${kr(x.gevinst)} kr`) : null, h('div.dempet', x.tekst))))),
+        h('p.dempet', 'Satser fra statsbudsjettet. Sjekk alltid detaljene hos Skatteetaten.'));
+    })(),
     egne.oppgjor ? h('section.kort', h('h2', `Skatteoppgjøret for ${aar}`),
       h('table.tabell.kompakt', h('thead', h('tr', h('th', ''), h('th.tall', 'Oppgjøret'), h('th.tall', 'FinSys-anslag'))), h('tbody',
         h('tr', h('td', 'Beregnet skatt'), h('td.tall', egne.oppgjor.beregnet != null ? kr(egne.oppgjor.beregnet) : '–'), h('td.tall', t.slipper ? kr(t.sumSkatt) : '–')),
@@ -244,6 +256,8 @@ function visSkatt(el, params, tegnPaNytt) {
           rad('− Minstefradrag', -t.minstefradrag),
           rad('− Renteutgifter', -t.renteutgifter),
           t.fagforening ? rad('− Fagforeningskontingent', -t.fagforening) : null,
+          t.ips ? rad('− Innskudd IPS', -t.ips) : null,
+          t.gaver ? rad('− Gaver til organisasjoner', -t.gaver) : null,
           t.andreFradrag ? rad('− Andre fradrag', -t.andreFradrag) : null,
           t.renteinntekter ? rad('+ Renteinntekter', t.renteinntekter) : null,
           t.aksjeinntekt ? rad(`+ Aksjeinntekt × ${String(t.satser.oppjustering).replace('.', ',')}`, t.aksjeinntekt * t.satser.oppjustering) : null,
@@ -274,9 +288,11 @@ function visSkatt(el, params, tegnPaNytt) {
         inp('Renteutgifter (overstyr)', 'renteutgifter', 'Se årsoppgaver fra långiverne', t.renteutgifter),
         inp('Fagforeningskontingent', 'fagforening', `Maks ${kr(t.satser.fagforeningMaks)} kr`, t.fagforening),
         inp('BSU-sparing i år', 'bsu', 'Gir 10 % skattefradrag (til og med året du fyller 33)'),
+        inp('Innskudd IPS i år', 'ips', `Fradrag i alminnelig inntekt, maks ${kr(t.satser.ipsMaks ?? 15000)} kr`),
+        inp('Gaver til frivillige organisasjoner', 'gaver', `Minst 500 kr, maks ${kr(t.satser.gaverMaks ?? 25000)} kr`),
         inp('Renteinntekter', 'renteinntekter'),
         inp('Utbytte/gevinst utenfor ASK', 'aksjeinntekt', 'Etter skjermingsfradrag'),
-        inp('Andre fradrag', 'andreFradrag', 'F.eks. reisefradrag, gaver til organisasjoner'),
+        inp('Andre fradrag', 'andreFradrag', 'F.eks. reisefradrag'),
         inp('Snitt bruttolønn resten av året (overstyr)', 'snittBrutto', null, t.snittBrutto)))));
 }
 

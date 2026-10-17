@@ -102,11 +102,27 @@ Netto kontantstrøm per betalingsmåned tilsvarer radene 8–30 i Kontantstrøm-
    - *Eksport*: regneark (.xlsx med sju ark), CSV fra transaksjonslisten og kalenderfil (.ics)
    - *Ukeoppsummering* på oversikten og som rapport (Rapport → Uke)
 
+7. **Innsikt** *(ferdig)*:
+   - *Formueendring*: hvor økningen kom fra – bank, innskudd, nedbetaling, avkastning (etter kreditt), pensjon,
+     kjøretøy og annet – per periode mellom frosne måneder
+   - *Belåning*: belåningsverdi, margin og hvor mye markedet kan falle per depot; scenarier −10 til −50 % med
+     beløp som må skytes inn; belåningsgrad per verdipapir kan registreres
+   - *Skjulte kostnader*: gebyrer, renter etter fradrag, termingebyr, valutapåslag på kort, fondskostnader og kurtasje
+   - *Uvanlige transaksjoner*: mulige dobbeltbelastninger, uvanlig store beløp, nye faste trekk, prisøkninger,
+     gebyrer og manglende refusjoner
+   - *Utlegg og refusjoner* (egen side): utestående per motpart, refusjoner fordelt på eldste utlegg, startdato og
+     startsaldo per motpart, påminnelse etter 30 dager
+   - *Skattesjekkliste* (Planlegging → Skatt): IPS, BSU, fagforening, gaver, rentefradrag, reisefradrag, ASK,
+     tap utenfor ASK, krypto, formuesskatt og restskatt – med anslått skattebesparelse
+
 ## Forslag til videre utvidelser
 
 | Forslag | Nytte |
 |---|---|
 | Eksakte tolkere per dokument | Lønnsslipp, Lånekassen, Nordea Finans, Pareto/Nordnet, skatteoppgjør – krever ett eksempel av hvert |
+| Ekte avkastning mot indeks | Tidsvektet avkastning per konto mot OSEBX/verdensindeks |
+| «Hva om»-simulator | Lønnsøkning, ny bil, jobbskifte, rente – effekt på kontantstrøm og formue |
+| Robusthet ved inntektsbortfall | Hvor mange måneder du klarer deg uten lønn |
 | Pensjons- og FIRE-prognose | Når kan du bli økonomisk uavhengig med dagens sparerate og forventet avkastning? |
 | Delt husholdning med egen innlogging | Den andre personen får egen tilgang til et felles, kryptert husholdningsregnskap |
 | Import fra kryptobørs | Beholdning og kostpris rett fra Firi/Coinbase-eksport |

@@ -26,6 +26,9 @@ import * as innstillinger from './views/settings.js';
 import * as rapport from './views/report.js';
 import * as planlegging from './views/planning.js';
 import * as husholdning from './views/household.js';
+import * as utlegg from './views/outlays.js';
+import * as innsikt from './views/insight.js';
+import { erUtlegg } from './model/outlays.js';
 
 const TILKOBLING = 'finsys.tilkobling';
 export const AUTOLAS_MIN = 15;
@@ -39,8 +42,10 @@ const RUTER = [
   { sti: 'kontantstrom', navn: 'Kontantstrøm', vis: kontantstrom },
   { sti: 'budsjett', navn: 'Budsjett', vis: budsjett },
   { sti: 'planlegging', navn: 'Planlegging', vis: planlegging },
-  { sti: 'formue', navn: 'Formue og gjeld', vis: formue },
+  { sti: 'innsikt', navn: 'Innsikt', vis: innsikt },
+  { sti: 'formue', navn: 'Formue', vis: formue },
   { sti: 'husholdning', navn: 'Husholdning', vis: husholdning, skjult: (db) => !db.husholdning?.aktiv },
+  { sti: 'utlegg', navn: 'Utlegg', vis: utlegg, skjult: (db) => !db.transaksjoner.some(erUtlegg) },
   { sti: 'rapport', navn: 'Rapport', vis: rapport },
   { sti: 'import', navn: 'Import', vis: importer },
   { sti: 'dokumenter', navn: 'Dokumenter', vis: dokumenter },

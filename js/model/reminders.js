@@ -8,6 +8,8 @@ import { budsjettVarsler } from '../views/budget.js';
 import { kr, datoNo } from '../util.js';
 import { garantier } from './documents.js';
 import { oppgjorsoversikt } from './household.js';
+import { utleggsoversikt } from './outlays.js';
+import { avvik } from './insight.js';
 
 const dagerMellom = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 86400000);
 const mndNavn = (mnd) => `${MND_NAVN[Number(mnd.slice(5, 7)) - 1].toLowerCase()} ${mnd.slice(0, 4)}`;
@@ -98,6 +100,17 @@ export function paminnelser(db, { idag = new Date().toISOString().slice(0, 10), 
   if (db.husholdning?.aktiv) {
     const o = oppgjorsoversikt(db);
     if (Math.abs(o.saldo) >= 1000) legg('husholdning-saldo', 'info', o.saldo > 0 ? `${db.husholdning.partner || 'Partneren'} skylder deg ${kr(o.saldo)} kr i felles utgifter` : `Du skylder ${db.husholdning.partner || 'partneren'} ${kr(-o.saldo)} kr i felles utgifter`, '#/husholdning');
+  }
+
+  // Utlegg som ikke er betalt tilbake
+  for (const g of utleggsoversikt(db, idag).grupper.filter((x) => x.id && x.utestaende >= 100 && x.dager > 30)) {
+    legg(`utlegg-${g.id}-${g.eldsteUbetalt}`, g.dager > 90 ? 'middels' : 'info', `${g.navn} skylder deg ${kr(g.utestaende)} kr i utlegg (eldste fra ${datoNo(g.eldsteUbetalt)})`, `#/utlegg?m=${encodeURIComponent(g.id)}`);
+  }
+
+  // Mulige dobbeltbelastninger og gebyrer (siste 30 dager)
+  const grense = new Date(Date.parse(idag) - 30 * 86400000).toISOString().slice(0, 10);
+  for (const a of avvik(db, { idag, dager: 30 }).filter((x) => ['dobbel', 'gebyr'].includes(x.type) && (x.dato || '') >= grense)) {
+    legg(`avvik-${a.id}`, 'middels', a.tekst, '#/innsikt?fane=avvik');
   }
 
   // Huskeliste

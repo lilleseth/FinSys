@@ -156,6 +156,7 @@ export function render(el, params) {
       notat: h('textarea', { rows: 3 }, d.notat || ''),
       delt: velg([{ verdi: '', tekst: 'Auto' }, { verdi: 'ja', tekst: 'Ja, felles' }, { verdi: 'nei', tekst: 'Nei, bare min' }], d.delt === true ? 'ja' : d.delt === false ? 'nei' : ''),
       husOppgjor: h('input', { type: 'checkbox', checked: !!d.husOppgjor }),
+      motpart: h('input', { list: 'motpart-liste', value: (db.motparter || []).find((m) => m.id === d.motpart)?.navn || '', placeholder: 'Kun for utlegg og refusjoner' }),
     };
     const like = ny ? [] : db.transaksjoner.filter((x) => x !== tr && x.tekst && x.tekst === tr.tekst);
     const alleLike = h('input', { type: 'checkbox' });
@@ -170,6 +171,7 @@ export function render(el, params) {
       like.length ? h('label.avkryss.hel', alleLike, ` Bruk samme kategori på alle ${like.length} andre transaksjoner med teksten «${tr.tekst}»`) : null,
       felt('Etiketter (kommaseparert)', inp.etiketter),
       felt('Detaljer', inp.detaljer),
+      h('div.hel', h('datalist#motpart-liste', (db.motparter || []).map((m) => h('option', { value: m.navn }))), felt('Motpart (utlegg/refusjon)', inp.motpart, 'Hvem som skal betale tilbake, eller hvem refusjonen kom fra. Vises under «Utlegg».')),
       h('div.hel', felt('Notat', inp.notat)),
       db.husholdning?.aktiv ? felt(`Felles med ${db.husholdning.partner || 'partner'}`, inp.delt, 'Auto følger felles kategorier og kontoer') : null,
       db.husholdning?.aktiv ? h('label.avkryss', inp.husOppgjor, ' Oppgjør i husholdningen (betaling til/fra den du deler med)') : null,
@@ -205,6 +207,14 @@ export function render(el, params) {
         detaljer: inp.detaljer.value.trim(),
         notat: inp.notat.value.trim(),
       });
+      const mpNavn = inp.motpart.value.trim();
+      if (mpNavn) {
+        db.motparter ||= [];
+        let mp = db.motparter.find((m) => m.navn.toLowerCase() === mpNavn.toLowerCase());
+        if (!mp) { mp = { id: 'mp-' + uid(), navn: mpNavn, alias: [] }; db.motparter.push(mp); }
+        d.motpart = mp.id;
+        delete d.ikkeRefunderes;
+      } else delete d.motpart;
       if (db.husholdning?.aktiv) {
         if (inp.delt.value === 'ja') d.delt = true; else if (inp.delt.value === 'nei') d.delt = false; else delete d.delt;
         if (inp.husOppgjor.checked) d.husOppgjor = true; else delete d.husOppgjor;
