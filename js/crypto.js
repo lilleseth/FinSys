@@ -9,6 +9,8 @@
 // Hver fil krypteres med tilfeldig IV og filstien som «additional data», slik at
 // krypterte filer ikke kan byttes om mellom stier uten at det oppdages.
 
+import { styrke } from './model/passordstyrke.js';
+
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 
@@ -148,5 +150,7 @@ export function passordProblem(pw, ekstraOrd = []) {
     if (lav.includes(ord)) return `Passordet bør ikke inneholde «${ord}».`;
   }
   if (new Set(pw).size < 6) return 'Passordet har for få ulike tegn.';
+  const st = styrke(pw, ekstraOrd);
+  if (st.nivaa === 0) return `Passordet er for lett å gjette (kan knekkes på ${st.tidEn} med ett grafikkort). ${st.tips[0] || 'Bruk 5–6 tilfeldige ord.'}`;
   return '';
 }

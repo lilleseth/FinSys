@@ -1,7 +1,7 @@
 // Innstillinger: datalager, import/eksport, kontoer, kategorier og skatteparametre.
 
 import { h, clear, uid, slug, lesBelop, lastNed, datoNo } from '../util.js';
-import { felt, velg, dialog, bekreft, sideTopp, toast } from '../ui.js';
+import { felt, velg, dialog, bekreft, sideTopp, toast, passordMaler } from '../ui.js';
 import { store } from '../store.js';
 import { lesRegneark, migrer } from '../import/migrate.js';
 import { TYPER, TYPE_FORKLARING } from '../model/categories.js';
@@ -245,7 +245,7 @@ export function render(el, params) {
     dialog({
       tittel: 'Bytt passord',
       innhold: h('form.skjema', { onsubmit: (e) => e.preventDefault() },
-        felt('Nåværende passord', gammelt), felt('Nytt passord (minst 12 tegn)', p1), felt('Gjenta nytt passord', p2),
+        felt('Nåværende passord', gammelt), felt('Nytt passord (minst 12 tegn)', p1), passordMaler(p1, p2, () => [hentTilkobling()?.owner]), felt('Gjenta nytt passord', p2),
         h('p.dempet', 'Andre enheter må låses opp med det nye passordet. Får du «feil passord» der, velg «Bytt datalager» og koble til på nytt.')),
       knapper: [{ tekst: 'Avbryt' }, { tekst: 'Bytt passord', type: 'primar', onclick: async () => {
         const problem = passordProblem(p1.value, [hentTilkobling()?.owner]);

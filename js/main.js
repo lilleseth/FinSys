@@ -7,7 +7,7 @@ if (window.top !== window.self) {
 }
 
 import { h, clear, lastNed } from './util.js';
-import { felt, toast, dialog } from './ui.js';
+import { felt, toast, dialog, passordMaler } from './ui.js';
 import { GitHubBackend } from './storage/github.js';
 import { LocalBackend } from './storage/local.js';
 import { Vault } from './vault.js';
@@ -193,7 +193,7 @@ function visOpprett(vault, t, token) {
   skjerm(
     h('h1', 'Velg et passord'),
     h('p', `Datalageret (${vault.backend.label}) er tomt. Velg et passord som brukes til å kryptere alt.`),
-    h('p.dempet', 'Bruk gjerne en setning med flere ord, f.eks. fire tilfeldige ord. Lagre passordet i en passordbehandler.'),
+    h('p.dempet', 'Bruk gjerne 5–6 tilfeldige ord, eller trykk «Foreslå et sterkt passord». Lagre passordet i en passordbehandler.'),
     h('form.skjema', {
       onsubmit: async (e) => {
         e.preventDefault();
@@ -214,6 +214,7 @@ function visOpprett(vault, t, token) {
       },
     },
     felt('Passord (minst 12 tegn)', p1),
+    passordMaler(p1, p2, () => [aktiv?.owner]),
     felt('Gjenta passord', p2),
     husk.el, husk.hjelp,
     feil,
@@ -328,6 +329,7 @@ function visGjenoppretting(vault, t, token) {
     },
     felt('Gjenopprettingsnøkkel', kode),
     felt('Nytt passord (minst 12 tegn)', p1),
+    passordMaler(p1, p2, () => [aktiv?.owner]),
     felt('Gjenta nytt passord', p2),
     feil,
     knapp),

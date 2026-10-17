@@ -163,6 +163,19 @@ tr.valgt td { background: var(--aksent-vask); }
 .garantier summary { cursor: pointer; }
 .garantier[open] summary { margin-bottom: 0.5rem; }
 .uke-punkter { margin: 0.25rem 0 0; padding-left: 1.2rem; display: grid; gap: 0.2rem; }
+.styrke { display: grid; gap: 0.35rem; font-size: 0.875rem; }
+.styrke-maler { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.styrke-segment { height: 6px; border-radius: 3px; background: var(--linje); }
+.styrke-segment.niva-0 { background: var(--neg); }
+.styrke-segment.niva-1 { background: #d98a00; }
+.styrke-segment.niva-2, .styrke-segment.niva-3 { background: var(--pos); }
+.niva-tekst-0 { color: var(--neg); }
+.niva-tekst-1 { color: var(--advarsel-tekst); }
+.niva-tekst-2, .niva-tekst-3 { color: var(--pos); }
+.styrke-tips { margin: 0; padding-left: 1.1rem; color: var(--tekst-2); }
+.styrke-forslag { margin: 0; color: var(--advarsel-tekst); background: var(--advarsel-bg); padding: 0.4rem 0.6rem; border-radius: 6px; }
+.styrke-handlinger { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+.styrke-handlinger .lenke { padding-left: 0; }
 .sjekkliste { list-style: none; padding: 0; margin: 0 0 0.75rem; display: grid; gap: 0.3rem; }
 .sjekkliste li.ok { color: var(--pos); }
 .sjekkliste li.feil { color: var(--neg); }

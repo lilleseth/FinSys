@@ -1,6 +1,7 @@
 // Felles UI-komponenter: dialog, varsel, skjemafelt, nøkkeltall-fliser.
 
 import { h, clear } from './util.js';
+import { styrke, foreslaPassord } from './model/passordstyrke.js';
 
 export function toast(tekst, type = 'info') {
   let host = document.getElementById('toasts');
@@ -95,3 +96,53 @@ export function sideTopp(tittel, undertittel, ...handlinger) {
 }
 
 export { h, clear };
+
+// Styrkemåler for nytt passord: viser styrke, tid å knekke og tips, og kan foreslå en passordsetning.
+// Passordet forlater aldri nettleseren – alt beregnes lokalt.
+export function passordMaler(p1, p2, hentEkstraOrd = () => []) {
+  const segmenter = [0, 1, 2, 3].map(() => h('span.styrke-segment'));
+  const navn = h('strong');
+  const tid = h('span.dempet');
+  const tips = h('ul.styrke-tips');
+  const forslagInfo = h('p.styrke-forslag', { hidden: true });
+  const visTekst = () => { for (const p of [p1, p2]) if (p) p.type = vis.checked ? 'text' : 'password'; };
+  const vis = h('input', { type: 'checkbox', onchange: () => visTekst() });
+  const el = h('div.styrke', { 'aria-live': 'polite' },
+    h('div.styrke-maler', segmenter),
+    h('div.styrke-tekst', navn, ' ', tid),
+    tips,
+    forslagInfo,
+    h('div.styrke-handlinger',
+      h('button.lenke', { type: 'button', onclick: () => {
+        const f = foreslaPassord(6);
+        p1.value = f.passord;
+        if (p2) p2.value = f.passord;
+        vis.checked = true;
+        visTekst();
+        for (const f of el.closest('form')?.querySelectorAll('.feil') || []) f.hidden = true;
+        forslagInfo.hidden = false;
+        forslagInfo.textContent = 'Seks tilfeldige ord fra en liste på over 1 000 ord. Lagre passordet i en passordbehandler eller skriv det ned og oppbevar det trygt før du fortsetter.';
+        oppdater();
+      } }, 'Foreslå et sterkt passord'),
+      h('label.avkryss', vis, ' Vis passord')));
+  const oppdater = () => {
+    const pw = p1.value;
+    el.classList.toggle('tom', !pw);
+    if (!pw) {
+      segmenter.forEach((s) => { s.className = 'styrke-segment'; });
+      navn.textContent = '';
+      tid.textContent = 'Lengde gir mest styrke – f.eks. 5–6 tilfeldige ord.';
+      clear(tips);
+      return;
+    }
+    const s = styrke(pw, hentEkstraOrd());
+    segmenter.forEach((seg, i) => { seg.className = `styrke-segment${i <= s.nivaa ? ` niva-${s.nivaa}` : ''}`; });
+    navn.textContent = `${s.navn}.`;
+    navn.className = `niva-tekst-${s.nivaa}`;
+    tid.textContent = `En angriper med ett kraftig grafikkort bruker ca. ${s.tidEn} på å gjette det (${s.tidTusen} med 1 000 grafikkort).`;
+    clear(tips).append(...s.tips.map((t) => h('li', t)));
+  };
+  p1.addEventListener('input', () => { forslagInfo.hidden = true; oppdater(); });
+  oppdater();
+  return el;
+}

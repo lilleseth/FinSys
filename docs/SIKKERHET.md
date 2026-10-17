@@ -14,6 +14,7 @@ del (GitHub-repoet, tokenen eller en enhet) kommer på avveie.
 | Token | Lagres kryptert med datanøkkelen i nettleseren. Uten passord (eller husket nøkkel) kan den ikke brukes. Bare finkornede tokens godtas. |
 | Enheten | «Husk meg» lagrer nøkkelen som ikke-eksporterbar nøkkel i nettleseren. Uten «husk meg» låses appen etter 15 minutter uten aktivitet og når fanen lukkes. |
 | Nettleseren | Streng innholdssikkerhetspolicy (CSP): bare appens egne skript og kun nettverkskall til `api.github.com`. Ingen eksterne biblioteker lastes fra nett (pdf.js ligger i repoet). Brukerdata settes aldri inn som HTML. |
+| Passordstyrke | Nye passord sjekkes lokalt mot vanlige passord, navn, ord, årstall, datoer, tastaturmønstre, gjentakelser og brukernavnet. Måleren viser omtrent hvor lenge en angriper må gjette, og passord som kan knekkes på under ett døgn med 1 000 grafikkort avvises. «Foreslå et sterkt passord» lager seks tilfeldige ord (ca. 60 bit). |
 | Innramming | Appen nekter å vises inne i andre nettsider. |
 | Installert app | Service workeren mellomlagrer bare appens egne filer (HTML/CSS/JS/ikoner) for offline-start. Kall til `api.github.com` og dataene dine går aldri gjennom den. Ny appversjon hentes alltid først når du er på nett. |
 | Metadata | Commit-meldinger i data-repoet inneholder ikke filnavn eller beløp. |
